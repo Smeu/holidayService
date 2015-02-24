@@ -12,11 +12,11 @@ import java.util.Properties;
 
 
 /**
- * Email service for sending emails using the gmail smtp.
+ * Email notification system for sending emails using the gmail smtp.
  *
  * @author Rares Smeu
  */
-public class EmailService {
+public class EmailNotification extends Notification {
 
     private static final String EMAIL_PROPERTIES_FILE = "email.properties";
 
@@ -24,9 +24,15 @@ public class EmailService {
 
     private static final String EMAIL_PASSWORD = "mail.password";
 
-    private Session session;
+    private static Session session;
 
-    public EmailService() {
+    public EmailNotification() {
+        if (session == null) {
+            initSession();
+        }
+    }
+
+    private void initSession() {
         Properties props = getProperties();
         final String username = props.getProperty(EMAIL_USERNAME);
         final String password = props.getProperty(EMAIL_PASSWORD);
@@ -35,7 +41,6 @@ public class EmailService {
                 return new PasswordAuthentication(username, password);
             }
         };
-
         session = Session.getDefaultInstance(props, authenticator);
     }
 
@@ -44,7 +49,7 @@ public class EmailService {
         InputStream input = null;
 
         try {
-            input = EmailService.class.getClassLoader().getResourceAsStream(EMAIL_PROPERTIES_FILE);
+            input = getClass().getClassLoader().getResourceAsStream(EMAIL_PROPERTIES_FILE);
             props.load(input);
         }
         catch (IOException ex) {
@@ -63,18 +68,14 @@ public class EmailService {
         return props;
     }
 
-    /**
-     * Sends the email.
-     *
-     * @param email email to be sent.
-     */
-    public void send(Email email) {
+    @Override
+    void send() {
         try {
             Message msg = new MimeMessage(session);
-            msg.setFrom(getSenderAddress(email));
-            msg.addRecipient(Message.RecipientType.TO, new InternetAddress(email.getTo()));
-            msg.setSubject(email.getSubject());
-            msg.setText(email.getMessage());
+            msg.setFrom(getSenderAddress());
+            msg.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
+            msg.setSubject(subject);
+            msg.setText(message);
             Transport.send(msg);
 
         }
@@ -84,12 +85,12 @@ public class EmailService {
         }
     }
 
-    private InternetAddress getSenderAddress(Email email) throws AddressException {
+    private InternetAddress getSenderAddress() throws AddressException {
         try {
-            return new InternetAddress(email.getFrom(), email.getSenderName());
+            return new InternetAddress(from, senderName);
         }
         catch (UnsupportedEncodingException e) {
-            return new InternetAddress(email.getFrom());
+            return new InternetAddress(from);
         }
     }
 }
